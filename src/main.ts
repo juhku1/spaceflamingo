@@ -815,7 +815,11 @@ function tryShoot() {
     } else {
       shootOrigin.copy(playerCenter).add(new THREE.Vector3(0, 1.2, 0));
     }
-    shootDirection.copy(aimTarget).sub(shootOrigin).normalize();
+    shootDirection.copy(aimTarget).sub(shootOrigin);
+    if (shootDirection.lengthSq() < 1e-6) {
+      shootDirection.copy(aimRay.ray.direction);
+    }
+    shootDirection.normalize();
 
     if (punchAction) {
       punchAction.paused = false;
@@ -825,9 +829,11 @@ function tryShoot() {
         }
       }, 0);
     }
+    const bulletSpawn = shootOrigin.clone().addScaledVector(shootDirection, 0.22);
+
     const bulletBody = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(shootOrigin.x, shootOrigin.y, shootOrigin.z)
+        .setTranslation(bulletSpawn.x, bulletSpawn.y, bulletSpawn.z)
         .setGravityScale(0.10)
         .setLinearDamping(0.2)
         .setCcdEnabled(true)
@@ -835,6 +841,7 @@ function tryShoot() {
     const collider = RAPIER.ColliderDesc.ball(0.08)
       .setRestitution(0.85)
       .setFriction(0.15)
+      .setCollisionGroups(collisionGroups(GROUP_BULLET, GROUP_WORLD | GROUP_ENEMY))
       .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     world.createCollider(collider, bulletBody);
     bulletBody.setLinvel(
@@ -1228,6 +1235,7 @@ function removeBullet(index: number) {
 const GROUP_PLAYER = 0b0001;
 const GROUP_WORLD = 0b0010;
 const GROUP_ENEMY = 0b0100;
+const GROUP_BULLET = 0b1000;
 
 const collisionGroups = (membership: number, filter: number) => (membership << 16) | filter;
 
