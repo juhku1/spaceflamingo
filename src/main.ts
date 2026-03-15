@@ -501,7 +501,7 @@ let currentLevel = 1;
 // let doorCooldownUntil = 0;
 
 const gameOverDiv = document.createElement("div");
-gameOverDiv.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; font-size: 48px; font-weight: bold; text-shadow: 3px 3px 6px black; display: none; text-align: center;";
+gameOverDiv.style.cssText = "position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(0,0,0,0.52); text-align: center; pointer-events: auto; touch-action: manipulation;";
 gameOverDiv.innerHTML = `GAME OVER<br><div style="font-size: 14px; color: white; margin-top: 20px; line-height: 1.6;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>`;
 app.appendChild(gameOverDiv);
 
@@ -536,21 +536,38 @@ function restartToStartFromGameOver() {
   window.location.reload();
 }
 
+function prepareGameOverOverlay() {
+  mobileMoveX = 0;
+  mobileMoveY = 0;
+  mobileJumpHeld = false;
+  mobileLookX = 0;
+  mobileLookY = 0;
+  mobileLookTargetX = 0;
+  mobileLookTargetY = 0;
+  mobileLookTouchActive = false;
+  if (mobileControlsLayer) {
+    mobileControlsLayer.style.display = "none";
+  }
+}
+
 function renderStandardGameOver(scoreValue: number, bestRecord: LocalBestScoreRecord) {
+  prepareGameOverOverlay();
   const bestLine = bestRecord.name
     ? `Best score on this device: ${bestRecord.score} (${bestRecord.name})`
     : `Best score on this device: ${bestRecord.score}`;
 
   gameOverDiv.innerHTML = `
-    <div style="font-size: 52px; color: #ef4444; font-weight: 900; margin-bottom: 10px;">GAME OVER</div>
-    <div style="font-size: 24px; color: #fff; line-height: 1.5; margin-bottom: 14px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-      Score: ${scoreValue}<br>
-      ${bestLine}
+    <div style="width: min(420px, calc(100vw - 32px)); border-radius: 16px; padding: 24px 20px; background: linear-gradient(180deg, rgba(31,41,55,0.96) 0%, rgba(17,24,39,0.96) 100%); border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 18px 42px rgba(0,0,0,0.42);">
+      <div style="font-size: 52px; color: #ef4444; font-weight: 900; margin-bottom: 10px; text-shadow: 3px 3px 6px rgba(0,0,0,0.45);">GAME OVER</div>
+      <div style="font-size: 24px; color: #fff; line-height: 1.5; margin-bottom: 14px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+        Score: ${scoreValue}<br>
+        ${bestLine}
+      </div>
+      <button id="restart-after-gameover" type="button" style="padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;">Back to start</button>
+      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
     </div>
-    <button id="restart-after-gameover" type="button" style="padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;">Back to start</button>
-    <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
   `;
-  gameOverDiv.style.display = "block";
+  gameOverDiv.style.display = "flex";
 
   const restartButton = gameOverDiv.querySelector<HTMLButtonElement>("#restart-after-gameover");
   restartButton?.addEventListener("click", () => {
@@ -559,20 +576,23 @@ function renderStandardGameOver(scoreValue: number, bestRecord: LocalBestScoreRe
 }
 
 function renderHighScoreGameOver(scoreValue: number) {
+  prepareGameOverOverlay();
   gameOverDiv.innerHTML = `
-    <div style="font-size: 52px; color: #ef4444; font-weight: 900; margin-bottom: 10px;">GAME OVER</div>
-    <div style="font-size: 24px; color: #fff; line-height: 1.5; margin-bottom: 12px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-      You made a high score on this device!<br>
-      Score: ${scoreValue}
+    <div style="width: min(420px, calc(100vw - 32px)); border-radius: 16px; padding: 24px 20px; background: linear-gradient(180deg, rgba(31,41,55,0.96) 0%, rgba(17,24,39,0.96) 100%); border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 18px 42px rgba(0,0,0,0.42);">
+      <div style="font-size: 52px; color: #ef4444; font-weight: 900; margin-bottom: 10px; text-shadow: 3px 3px 6px rgba(0,0,0,0.45);">GAME OVER</div>
+      <div style="font-size: 24px; color: #fff; line-height: 1.5; margin-bottom: 12px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
+        You made a high score on this device!<br>
+        Score: ${scoreValue}
+      </div>
+      <div style="font-size: 14px; color: #fde68a; margin-bottom: 10px;">Type your name:</div>
+      <input id="highscore-name" type="text" maxlength="24" placeholder="Player" style="width: min(260px, 80vw); padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 14px; text-align: center; outline: none;" />
+      <div style="margin-top: 10px; display: flex; justify-content: center; gap: 8px;">
+        <button id="save-highscore" type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(16,185,129,0.28); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;">Save and continue</button>
+      </div>
+      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
     </div>
-    <div style="font-size: 14px; color: #fde68a; margin-bottom: 10px;">Type your name:</div>
-    <input id="highscore-name" type="text" maxlength="24" placeholder="Player" style="width: min(260px, 80vw); padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 14px; text-align: center; outline: none;" />
-    <div style="margin-top: 10px; display: flex; justify-content: center; gap: 8px;">
-      <button id="save-highscore" type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(16,185,129,0.28); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;">Save and continue</button>
-    </div>
-    <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
   `;
-  gameOverDiv.style.display = "block";
+  gameOverDiv.style.display = "flex";
 
   const nameInput = gameOverDiv.querySelector<HTMLInputElement>("#highscore-name");
   const saveButton = gameOverDiv.querySelector<HTMLButtonElement>("#save-highscore");
@@ -664,6 +684,7 @@ let mobileMoveX = 0;
 let mobileMoveY = 0;
 let mobileJumpHeld = false;
 let mobileDropBtn: HTMLButtonElement | null = null;
+let mobileControlsLayer: HTMLDivElement | null = null;
 let mobileLookX = 0;
 let mobileLookY = 0;
 let mobileLookTargetX = 0;
@@ -882,6 +903,7 @@ function setupMobileControls() {
   const mobileLayer = document.createElement("div");
   mobileLayer.style.cssText =
     "position: fixed; inset: 0; z-index: 25; pointer-events: none; touch-action: none; user-select: none;";
+  mobileControlsLayer = mobileLayer;
   app.appendChild(mobileLayer);
 
   const leftBase = document.createElement("div");
