@@ -491,6 +491,7 @@ let lastSpawnTime = 0;
 const baseEnemySpeed = 2.5;
 const baseSpawnInterval = 3;
 const baseMaxEnemies = 100;
+const maxEnemySpeedRatioToPlayer = 0.9;
 let gameOver = false;
 let lastDebugTime = 0;
 let groundLevel = -0.6;
@@ -502,7 +503,7 @@ let currentLevel = 1;
 
 const gameOverDiv = document.createElement("div");
 gameOverDiv.style.cssText = "position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(0,0,0,0.52); text-align: center; pointer-events: auto; touch-action: manipulation;";
-gameOverDiv.innerHTML = `GAME OVER<br><div style="font-size: 14px; color: white; margin-top: 20px; line-height: 1.6;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>`;
+gameOverDiv.innerHTML = `GAME OVER<br><div style="font-size: 14px; color: white; margin-top: 20px; line-height: 1.6;">Credits:<br><a href="https://poly.pizza/m/zbtPq4dOJL" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Astronaut</a> by Quaternius (CC0)<br><a href="https://poly.pizza/m/1BFCYNej8YT" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Wide City from "Life Support"</a> by Danni Bittman (CC BY)</div>`;
 app.appendChild(gameOverDiv);
 
 const localBestScoreKey = "spaceflamingo.bestScore.v1";
@@ -564,7 +565,7 @@ function renderStandardGameOver(scoreValue: number, bestRecord: LocalBestScoreRe
         ${bestLine}
       </div>
       <button id="restart-after-gameover" type="button" style="padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;">Back to start</button>
-      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
+      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br><a href="https://poly.pizza/m/zbtPq4dOJL" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Astronaut</a> by Quaternius (CC0)<br><a href="https://poly.pizza/m/1BFCYNej8YT" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Wide City from "Life Support"</a> by Danni Bittman (CC BY)</div>
     </div>
   `;
   gameOverDiv.style.display = "flex";
@@ -589,7 +590,7 @@ function renderHighScoreGameOver(scoreValue: number) {
       <div style="margin-top: 10px; display: flex; justify-content: center; gap: 8px;">
         <button id="save-highscore" type="button" style="padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); background: rgba(16,185,129,0.28); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;">Save and continue</button>
       </div>
-      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br>Astronaut by Quaternius<br>Wide City by Danni Litman</div>
+      <div style="font-size: 13px; color: white; margin-top: 16px; line-height: 1.6; opacity: 0.9;">Credits:<br><a href="https://poly.pizza/m/zbtPq4dOJL" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Astronaut</a> by Quaternius (CC0)<br><a href="https://poly.pizza/m/1BFCYNej8YT" target="_blank" rel="noopener noreferrer" style="color: #93c5fd;">Wide City from "Life Support"</a> by Danni Bittman (CC BY)</div>
     </div>
   `;
   gameOverDiv.style.display = "flex";
@@ -1523,16 +1524,29 @@ function scheduleAmmoCrateExplosion(pickup: AmmoPickup, delayMs: number) {
 }
 
 function getDifficultySettings(elapsedSeconds: number) {
-  // 0..1 skaala, jossa vaikeus nousee ensimmäisen noin 3 minuutin ajan.
-  const ramp = Math.min(1, Math.max(0, elapsedSeconds / 180));
+  const safeElapsed = Math.max(0, elapsedSeconds);
+  const minutes = safeElapsed / 60;
+  const maxEnemySpeed = runSpeed * maxEnemySpeedRatioToPlayer;
+  const maxSpeedMultiplier = maxEnemySpeed / baseEnemySpeed;
+  const speedRamp = 1 - Math.exp(-safeElapsed / 240);
+  const speedMultiplier = 1 + (maxSpeedMultiplier - 1) * speedRamp;
+  const spawnInterval = Math.max(0.22, baseSpawnInterval / (1 + 0.2 * minutes + 0.035 * minutes * minutes));
+  const maxEnemies = Math.floor(baseMaxEnemies + 12 * minutes + 10 * Math.log1p(safeElapsed / 30));
+  const phasingChance = Math.min(0.96, 0.5 + 0.12 * Math.log1p(1 + minutes));
+  const phaseRamp = Math.min(1, Math.log1p(1 + minutes) / Math.log(10));
+  const spawnPressure = baseSpawnInterval / spawnInterval;
+  const crowdPressure = maxEnemies / baseMaxEnemies;
+  const displayMultiplier = speedMultiplier * Math.sqrt(spawnPressure) * Math.sqrt(crowdPressure);
+
   return {
-    speedMultiplier: 1 + 0.55 * ramp,
-    spawnInterval: Math.max(1.2, baseSpawnInterval - 1.6 * ramp),
-    maxEnemies: Math.floor(baseMaxEnemies + 60 * ramp),
-    phasingChance: 0.5 + 0.35 * ramp,
-    phaseSwitchMin: 1.2,
-    phaseSwitchMax: 2.4,
-    ramp,
+    speedMultiplier,
+    spawnInterval,
+    maxEnemies,
+    phasingChance,
+    phaseSwitchMin: THREE.MathUtils.lerp(2.0, 0.7, phaseRamp),
+    phaseSwitchMax: THREE.MathUtils.lerp(4.0, 1.35, phaseRamp),
+    ramp: speedRamp,
+    displayMultiplier,
   };
 }
 
@@ -2878,7 +2892,7 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.getElapsedTime();
   const currentDifficulty = getDifficultySettings(elapsed);
-  difficultyDiv.textContent = `Difficulty: ${currentDifficulty.speedMultiplier.toFixed(2)}x`;
+  difficultyDiv.textContent = `Difficulty: ${currentDifficulty.displayMultiplier.toFixed(2)}x`;
 
   const mobileLookBlend = 1 - Math.exp(-10 * delta);
   mobileLookX += (mobileLookTargetX - mobileLookX) * mobileLookBlend;

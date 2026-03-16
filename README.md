@@ -30,5 +30,6 @@ Nopea Three.js + TypeScript -pohja selaimessa pyörivälle 3D-pelille.
 
 ## Credits / Assetit
 
-- Astronaut: Quaternius
-- Wide City by Danni Litman
+- [Astronaut](https://poly.pizza/m/zbtPq4dOJL) by Quaternius (CC0)
+- [Wide City from "Life Support"](https://poly.pizza/m/1BFCYNej8YT) by Danni Bittman (CC BY)
+- License: Creative Commons Attribution (CC BY)
