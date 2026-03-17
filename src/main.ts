@@ -712,9 +712,7 @@ let mobileLookTargetX = 0;
 let mobileLookTargetY = 0;
 let mobileLookTouchActive = false;
 let mobileLookReleasedAt = -1;
-let mobileSwipeSuppressUntil = 0;
 const mobileLookReturnDelayMs = 1500;
-const mobileLookRetouchSuppressMs = 120;
 let mobileLeftStickReleasedAt = -1;
 
 window.addEventListener("mousemove", (event) => {
@@ -1063,11 +1061,6 @@ function setupMobileControls() {
   const shootTapMaxMove = 14;
   const lookDeadzone = 0.16;
   const lookRadius = 84;
-  const swipePixelDeadzone = 0.8;
-  const swipeMaxStep = 16;
-  const swipeYawSensitivity = 0.0024;
-  const swipePitchSensitivity = 0.0019;
-  const aimSwipePrecisionMultiplier = 0.52;
   const aimContinuousPrecisionMultiplier = 0.4;
 
   const dismissLookHint = () => {
@@ -1086,6 +1079,8 @@ function setupMobileControls() {
     const mag = Math.sqrt(nx * nx + ny * ny);
 
     if (mag < lookDeadzone) {
+      mobileLookX = 0;
+      mobileLookY = 0;
       mobileLookTargetX = 0;
       mobileLookTargetY = 0;
       return;
@@ -1097,38 +1092,21 @@ function setupMobileControls() {
     ny = (ny / mag) * scaledMag;
     mobileLookTargetX = (nx / Math.max(0.0001, scaledMag)) * targetMagnitude;
     mobileLookTargetY = (ny / Math.max(0.0001, scaledMag)) * targetMagnitude;
+    mobileLookX = mobileLookTargetX;
+    mobileLookY = mobileLookTargetY;
   };
 
   const resetLookDrag = () => {
+    mobileLookX = 0;
+    mobileLookY = 0;
     mobileLookTargetX = 0;
     mobileLookTargetY = 0;
-  };
-
-  const applySwipeLook = (deltaX: number, deltaY: number) => {
-    const limitedX = THREE.MathUtils.clamp(deltaX, -swipeMaxStep, swipeMaxStep);
-    const limitedY = THREE.MathUtils.clamp(deltaY, -swipeMaxStep, swipeMaxStep);
-
-    const stepX = Math.abs(limitedX) < swipePixelDeadzone ? 0 : limitedX;
-    const stepY = Math.abs(limitedY) < swipePixelDeadzone ? 0 : limitedY;
-
-    if (stepX === 0 && stepY === 0) {
-      return;
-    }
-
-    const precision = isAiming ? aimSwipePrecisionMultiplier : 1;
-    yaw -= stepX * swipeYawSensitivity * precision;
-    pitch = clampPitch(pitch - stepY * swipePitchSensitivity * precision);
   };
 
   lookPad.addEventListener("pointerdown", (event: PointerEvent) => {
     event.preventDefault();
     ensureAudioRunning();
     dismissLookHint();
-    const now = performance.now();
-    const releasedForMs = mobileLookReleasedAt < 0 ? 0 : now - mobileLookReleasedAt;
-    if (releasedForMs >= mobileLookReturnDelayMs) {
-      mobileSwipeSuppressUntil = now + mobileLookRetouchSuppressMs;
-    }
     mobileLookTouchActive = true;
     mobileLookReleasedAt = -1;
     lookPointerId = event.pointerId;
@@ -1140,6 +1118,7 @@ function setupMobileControls() {
     lookLast.x = event.clientX;
     lookLast.y = event.clientY;
     resetLookDrag();
+    updateLookTarget(event.clientX, event.clientY);
     lookPad.setPointerCapture(event.pointerId);
   });
 
@@ -1148,19 +1127,8 @@ function setupMobileControls() {
       return;
     }
     event.preventDefault();
-    if (performance.now() < mobileSwipeSuppressUntil) {
-      lookAnchor.x = event.clientX;
-      lookAnchor.y = event.clientY;
-      lookLast.x = event.clientX;
-      lookLast.y = event.clientY;
-      resetLookDrag();
-      return;
-    }
-    const deltaX = event.clientX - lookLast.x;
-    const deltaY = event.clientY - lookLast.y;
     lookLast.x = event.clientX;
     lookLast.y = event.clientY;
-    applySwipeLook(deltaX, deltaY);
     updateLookTarget(event.clientX, event.clientY);
   });
 
@@ -2913,6 +2881,13 @@ function animate() {
   const elapsed = clock.getElapsedTime();
   const currentDifficulty = getDifficultySettings(elapsed);
   difficultyDiv.textContent = `Difficulty: ${currentDifficulty.displayMultiplier.toFixed(2)}x`;
+
+  const mobileLookYawSpeed = 1.85;
+  const mobileLookPitchSpeed = 1.45;
+  if (Math.abs(mobileLookX) > 0.0001 || Math.abs(mobileLookY) > 0.0001) {
+    yaw -= mobileLookX * mobileLookYawSpeed * delta;
+    pitch = clampPitch(pitch - mobileLookY * mobileLookPitchSpeed * delta);
+  }
 
   if (isTouchDevice && !mobileLookTouchActive && mobileLookReleasedAt > 0) {
     const releasedForMs = performance.now() - mobileLookReleasedAt;
