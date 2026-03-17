@@ -39,6 +39,25 @@ difficultyDiv.style.cssText =
 difficultyDiv.textContent = "Difficulty: 1.00x";
 app.appendChild(difficultyDiv);
 
+const notificationContainer = document.createElement("div");
+notificationContainer.id = "notification-container";
+notificationContainer.style.cssText =
+  "position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 25; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;";
+app.appendChild(notificationContainer);
+
+function showNotification(message: string, durationMs = 3000) {
+  const notification = document.createElement("div");
+  notification.style.cssText =
+    "padding: 12px 16px; background: rgba(255, 215, 0, 0.95); color: #000; border-radius: 8px; font-size: 14px; font-weight: 600; text-shadow: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); animation: slideUp 0.3s ease-out; max-width: 280px; text-align: center; line-height: 1.3;";
+  notification.textContent = message;
+  notificationContainer.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = "slideDown 0.3s ease-out";
+    setTimeout(() => notification.remove(), 300);
+  }, durationMs);
+}
+
 const helpButton = document.createElement("button");
 helpButton.type = "button";
 helpButton.textContent = "Ohjeet / Help (H)";
@@ -475,6 +494,7 @@ const ammoPickups: AmmoPickup[] = [];
 const ammoDropBeacons: AmmoDropBeacon[] = [];
 const ammoPerPickup = 20;
 let ammo = ammoPerPickup * 2;
+let ammoCratesCollected = 0;
 const droppedAmmoCratePickupDelayMs = 5000;
 const ammoCrateSkySpawnHeight = 42;
 const ammoCrateFallAcceleration = 8;
@@ -1213,7 +1233,7 @@ const gravity = -14;
 const bulletSpeed = 52;
 const bulletLifetime = useMobilePerformanceProfile ? 1.6 : 2.2;
 const maxActiveBullets = useMobilePerformanceProfile ? 24 : 48;
-const ammoCrateHitRadius = 0.3;
+const ammoCrateHitRadius = 0.5;
 const ammoCrateFlashRadius = 4.6;
 const ammoCrateExplosionRadius = ammoCrateFlashRadius * 5;
 const ammoCrateChainRadius = ammoCrateFlashRadius * 1.6;
@@ -2981,7 +3001,13 @@ function animate() {
     if (dist < 1.5 && pickup.position.y <= pickup.landY + 0.02 && performance.now() >= pickup.collectAvailableAt) {
       // Kerää ammuslaatikko
       ammo += ammoPerPickup;
+      ammoCratesCollected++;
       ammoDiv.textContent = `Ammo: ${ammo}`;
+      if (ammoCratesCollected === 1) {
+        showNotification("Ammo collected! You can also shoot these crates. 💥");
+      } else if (ammoCratesCollected === 10) {
+        showNotification("10 ammo crates collected. Try dropping and exploding them by shooting!", 4000);
+      }
       renderCarriedAmmoCrates();
       scene.remove(pickup.mesh);
       ammoPickups.splice(i, 1);
