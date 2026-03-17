@@ -2623,7 +2623,7 @@ function updatePlayer(delta: number) {
   } else if (isTouchDevice) {
     const releasedForMs = mobileLeftStickReleasedAt < 0 ? 0 : performance.now() - mobileLeftStickReleasedAt;
     const autoFaceDelayMs = 180;
-    const isActivelyLooking = Math.abs(mobileLookX) > 0.12 || Math.abs(mobileLookY) > 0.12;
+    const isActivelyLooking = mobileLookTouchActive;
 
     if (releasedForMs > autoFaceDelayMs && !isActivelyLooking) {
       const targetYaw = Math.atan2(forward.x, forward.z);
@@ -2913,17 +2913,6 @@ function animate() {
   const elapsed = clock.getElapsedTime();
   const currentDifficulty = getDifficultySettings(elapsed);
   difficultyDiv.textContent = `Difficulty: ${currentDifficulty.displayMultiplier.toFixed(2)}x`;
-
-  const mobileLookBlend = 1 - Math.exp(-10 * delta);
-  mobileLookX += (mobileLookTargetX - mobileLookX) * mobileLookBlend;
-  mobileLookY += (mobileLookTargetY - mobileLookY) * mobileLookBlend;
-
-  const mobileLookYawSpeed = 1.85;
-  const mobileLookPitchSpeed = 1.45;
-  if (Math.abs(mobileLookX) > 0.0001 || Math.abs(mobileLookY) > 0.0001) {
-    yaw -= mobileLookX * mobileLookYawSpeed * delta;
-    pitch = clampPitch(pitch - mobileLookY * mobileLookPitchSpeed * delta);
-  }
 
   if (isTouchDevice && !mobileLookTouchActive && mobileLookReleasedAt > 0) {
     const releasedForMs = performance.now() - mobileLookReleasedAt;
