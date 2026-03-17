@@ -1061,7 +1061,7 @@ function setupMobileControls() {
   const shootTapMaxMove = 14;
   const lookDeadzone = 0.16;
   const lookRadius = 84;
-  const lookResponseExponent = 1.6;
+  const lookResponseExponent = 1.45;
   const aimContinuousPrecisionMultiplier = 0.4;
 
   const dismissLookHint = () => {
@@ -2884,7 +2884,7 @@ function animate() {
   const currentDifficulty = getDifficultySettings(elapsed);
   difficultyDiv.textContent = `Difficulty: ${currentDifficulty.displayMultiplier.toFixed(2)}x`;
 
-  const mobileLookYawSpeed = 1.85;
+  const mobileLookYawSpeed = 2.13;
   const mobileLookPitchSpeed = 1.45;
   if (Math.abs(mobileLookX) > 0.0001 || Math.abs(mobileLookY) > 0.0001) {
     yaw -= mobileLookX * mobileLookYawSpeed * delta;
