@@ -1061,6 +1061,7 @@ function setupMobileControls() {
   const shootTapMaxMove = 14;
   const lookDeadzone = 0.16;
   const lookRadius = 84;
+  const lookResponseExponent = 1.6;
   const aimContinuousPrecisionMultiplier = 0.4;
 
   const dismissLookHint = () => {
@@ -1087,7 +1088,8 @@ function setupMobileControls() {
     }
 
     const scaledMag = THREE.MathUtils.clamp((mag - lookDeadzone) / (1 - lookDeadzone), 0, 1);
-    const targetMagnitude = scaledMag * (isAiming ? aimContinuousPrecisionMultiplier : 1);
+    const curvedMag = Math.pow(scaledMag, lookResponseExponent);
+    const targetMagnitude = curvedMag * (isAiming ? aimContinuousPrecisionMultiplier : 1);
     nx = (nx / mag) * scaledMag;
     ny = (ny / mag) * scaledMag;
     mobileLookTargetX = (nx / Math.max(0.0001, scaledMag)) * targetMagnitude;
@@ -2643,11 +2645,11 @@ function updateCamera(delta: number) {
   // Over-shoulder offset (lokaali kameran suhteen)
   const normalSide = useMobilePortraitCamera ? 0.25 : 0.8;
   const normalUp = useMobilePortraitCamera ? 2.9 : 2.8;
-  const normalBack = useMobilePortraitCamera ? 6.2 : 5.0;
+  const normalBack = useMobilePortraitCamera ? 6.7 : 5.45;
 
   const adsSide = useMobilePortraitCamera ? 0.05 : 0.15;
   const adsUp = useMobilePortraitCamera ? 2.7 : 2.6;
-  const adsBack = useMobilePortraitCamera ? 3.2 : 2.5;
+  const adsBack = useMobilePortraitCamera ? 3.45 : 2.75;
   
   const sideOffset = normalSide + (adsSide - normalSide) * aimTransition;
   const upOffset = normalUp + (adsUp - normalUp) * aimTransition;
